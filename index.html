@@ -31,7 +31,7 @@
         .hamburger-menu {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 20px;
             width: 30px;
             height: 30px;
             cursor: pointer;
@@ -63,12 +63,12 @@
         .sidebar {
             position: fixed;
             top: 0;
-            right: -350px;
+            left: -350px;
             width: 350px;
             height: 100vh;
             background-color: #111111;
-            border-left: 1px solid #333;
-            transition: right 0.3s ease;
+            border-right: 1px solid #333;
+            transition: left 0.3s ease;
             z-index: 999;
             padding: 20px;
             box-sizing: border-box;
@@ -76,7 +76,7 @@
         }
         
         .sidebar.active {
-            right: 0;
+            left: 0;
         }
         
         .sidebar-header {
@@ -134,7 +134,7 @@
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         
         .search-input {
@@ -145,18 +145,26 @@
             font-family: 'Courier New', monospace;
             font-size: 14px;
             outline: none;
-            width: 300px;
+            width: 220px;
+            height: 36px;
+            box-sizing: border-box;
         }
         
         .search-btn, .bookmark-btn {
             background-color: #000;
             color: #ffffff;
             border: 1px solid #ffffff;
-            padding: 8px 16px;
             font-family: 'Courier New', monospace;
             cursor: pointer;
-            font-size: 14px;
-            min-width: 80px;
+            font-size: 16px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 0;
+            filter: grayscale(100%);
         }
         
         .search-btn:hover, .bookmark-btn:hover {
@@ -324,13 +332,14 @@
         }
         
         @media (max-width:768px){
-            .search-input {width:200px;}
-            .search-btn, .bookmark-btn {padding: 8px 12px; min-width: 60px;}
+            .search-input {width:180px;}
+            .search-btn, .bookmark-btn {width: 32px; height: 32px; font-size: 14px;}
+            .search-input {height: 32px; font-size: 12px;}
             .term-english {font-size:24px;}
             .term-turkish {font-size:18px;}
             .term-description {font-size:14px;}
             .nav-btn {width:50px;height:50px;font-size:20px;}
-            .sidebar {width: 100%; right: -100%;}
+            .sidebar {width: 100%; left: -100%;}
         }
     </style>
 </head>
@@ -347,10 +356,6 @@
 
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            FAVORİ TERİMLER
-            <span style="float: right; font-size: 14px; color: #666;" id="favoriteCount">0</span>
-        </div>
         <div id="favoritesList">
             <div class="no-favorites">
                 Henüz favori terim eklemediniz.<br><br>
@@ -362,9 +367,9 @@
     <div class="terminal-body">
         <div class="search-container">
             <input type="text" class="search-input" id="searchInput" placeholder="">
-            <button class="search-btn" onclick="searchTerms()">SEARCH</button>
-            <button class="search-btn" onclick="clearSearch()">CLEAR</button>
-            <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()">★</button>
+            <button class="search-btn" onclick="searchTerms()" title="Ara">🔍</button>
+            <button class="search-btn" onclick="clearSearch()" title="Temizle">✕</button>
+            <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()" title="Favorilere Ekle">☆</button>
         </div>
         
         <div class="term-display" id="termDisplay">
@@ -498,9 +503,11 @@
             if (isFavorited) {
                 bookmarkBtn.classList.add('favorited');
                 bookmarkBtn.textContent = '★';
+                bookmarkBtn.title = 'Favorilerden Çıkar';
             } else {
                 bookmarkBtn.classList.remove('favorited');
                 bookmarkBtn.textContent = '☆';
+                bookmarkBtn.title = 'Favorilere Ekle';
             }
         }
 
@@ -527,7 +534,7 @@
         }
 
         function updateFavoriteCount() {
-            document.getElementById('favoriteCount').textContent = favorites.length;
+            // Başlık kaldırıldığı için bu fonksiyon artık boş
         }
 
         function removeFavorite(index) {
