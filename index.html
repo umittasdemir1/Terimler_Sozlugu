@@ -27,6 +27,106 @@
             position: relative;
         }
         
+        /* Hamburger Menu */
+        .hamburger-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        
+        .hamburger-line {
+            width: 100%;
+            height: 3px;
+            background-color: #ffffff;
+            transition: 0.3s;
+        }
+        
+        .hamburger-menu.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .hamburger-menu.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger-menu.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100vh;
+            background-color: #111111;
+            border-left: 1px solid #333;
+            transition: right 0.3s ease;
+            z-index: 999;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        .sidebar.active {
+            right: 0;
+        }
+        
+        .sidebar-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .favorite-item {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .favorite-item:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .favorite-english {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .favorite-turkish {
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+        
+        .favorite-remove {
+            float: right;
+            color: #ff6b6b;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: -2px;
+        }
+        
+        .no-favorites {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            margin-top: 50px;
+        }
+        
         .search-container {
             position: absolute;
             top: 75px;
@@ -48,7 +148,7 @@
             width: 300px;
         }
         
-        .search-btn {
+        .search-btn, .bookmark-btn {
             background-color: #000;
             color: #ffffff;
             border: 1px solid #ffffff;
@@ -56,10 +156,16 @@
             font-family: 'Courier New', monospace;
             cursor: pointer;
             font-size: 14px;
+            min-width: 80px;
         }
         
-        .search-btn:hover {
+        .search-btn:hover, .bookmark-btn:hover {
             background-color: #ffffff;
+            color: #000;
+        }
+        
+        .bookmark-btn.favorited {
+            background-color: #ffd180;
             color: #000;
         }
         
@@ -202,36 +308,78 @@
             font-weight: 900;
         }
         
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            display: none;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
         @media (max-width:768px){
             .search-input {width:200px;}
+            .search-btn, .bookmark-btn {padding: 8px 12px; min-width: 60px;}
             .term-english {font-size:24px;}
             .term-turkish {font-size:18px;}
             .term-description {font-size:14px;}
             .nav-btn {width:50px;height:50px;font-size:20px;}
+            .sidebar {width: 100%; right: -100%;}
         }
     </style>
 </head>
 <body>
+    <!-- Hamburger Menu -->
+    <div class="hamburger-menu" onclick="toggleSidebar()">
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+        <div class="hamburger-line"></div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            FAVORİ TERİMLER
+            <span style="float: right; font-size: 14px; color: #666;" id="favoriteCount">0</span>
+        </div>
+        <div id="favoritesList">
+            <div class="no-favorites">
+                Henüz favori terim eklemediniz.<br><br>
+                Bir terimi favorilere eklemek için ★ butonunu kullanın.
+            </div>
+        </div>
+    </div>
+
     <div class="terminal-body">
         <div class="search-container">
             <input type="text" class="search-input" id="searchInput" placeholder="">
             <button class="search-btn" onclick="searchTerms()">SEARCH</button>
             <button class="search-btn" onclick="clearSearch()">CLEAR</button>
+            <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()">★</button>
         </div>
         
         <div class="term-display" id="termDisplay">
             <div class="loading">
                 Veriler yükleniyor...<br>
-                GitHub'dan JSON verisi çekiliyor...
+                Cache kontrol ediliyor...
             </div>
         </div>
         
         <div class="navigation">
-            <button class="nav-btn" id="prevBtn" onclick="previousTerm()">◀</button>
+            <button class="nav-btn" id="prevBtn" onclick="previousTerm()" aria-label="Önceki terim">◀</button>
             <div class="term-counter">
                 <span id="currentIndex" class="current-number">0</span> / <span id="totalTerms" class="total-number">0</span>
             </div>
-            <button class="nav-btn" id="nextBtn" onclick="nextTerm()">▶</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextTerm()" aria-label="Sonraki terim">▶</button>
         </div>
     </div>
 
@@ -241,9 +389,220 @@
         let currentTerms = [];
         let currentIndex = 0;
         let isDataLoaded = false;
+        let favorites = [];
 
-        // GitHub JSON URL'si
+        // Cache ve API ayarları
+        const CACHE_KEY = 'programming_terms_cache';
+        const FAVORITES_KEY = 'programming_favorites';
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 saat
         const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/umittasdemir1/Terimler_Sozlugu/refs/heads/main/terms.json';
+
+        // Cache fonksiyonları
+        function saveToCache(data) {
+            const cacheData = {
+                terms: data,
+                timestamp: Date.now()
+            };
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+                console.log('Veriler cache\'e kaydedildi');
+            } catch (e) {
+                console.error('Cache kaydetme hatası:', e);
+            }
+        }
+
+        function loadFromCache() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    const data = JSON.parse(cached);
+                    if (Date.now() - data.timestamp < CACHE_DURATION) {
+                        console.log('Veriler cache\'den yüklendi');
+                        return data.terms;
+                    } else {
+                        console.log('Cache süresi dolmuş, yeniden çekiliyor');
+                        localStorage.removeItem(CACHE_KEY);
+                    }
+                }
+            } catch (e) {
+                console.error('Cache okuma hatası:', e);
+                localStorage.removeItem(CACHE_KEY);
+            }
+            return null;
+        }
+
+        // Favori fonksiyonları
+        function loadFavorites() {
+            try {
+                const saved = localStorage.getItem(FAVORITES_KEY);
+                if (saved) {
+                    favorites = JSON.parse(saved);
+                    updateFavoritesList();
+                    updateFavoriteCount();
+                }
+            } catch (e) {
+                console.error('Favoriler yükleme hatası:', e);
+                favorites = [];
+            }
+        }
+
+        function saveFavorites() {
+            try {
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            } catch (e) {
+                console.error('Favoriler kaydetme hatası:', e);
+            }
+        }
+
+        function toggleBookmark() {
+            if (!isDataLoaded || currentTerms.length === 0) return;
+            
+            const currentTerm = currentTerms[currentIndex];
+            const existingIndex = favorites.findIndex(fav => 
+                fav.english === currentTerm.english && fav.turkish === currentTerm.turkish
+            );
+            
+            if (existingIndex !== -1) {
+                // Favorilerden çıkar
+                favorites.splice(existingIndex, 1);
+                showMessage('Favorilerden çıkarıldı!');
+            } else {
+                // Favorilere ekle
+                favorites.push({
+                    english: currentTerm.english,
+                    turkish: currentTerm.turkish,
+                    description: currentTerm.description,
+                    category: currentTerm.category,
+                    categoryTurkish: currentTerm.categoryTurkish,
+                    example: currentTerm.example,
+                    pronunciation: currentTerm.pronunciation
+                });
+                showMessage('Favorilere eklendi!');
+            }
+            
+            saveFavorites();
+            updateFavoritesList();
+            updateFavoriteCount();
+            updateBookmarkButton();
+        }
+
+        function updateBookmarkButton() {
+            if (!isDataLoaded || currentTerms.length === 0) return;
+            
+            const currentTerm = currentTerms[currentIndex];
+            const bookmarkBtn = document.getElementById('bookmarkBtn');
+            const isFavorited = favorites.some(fav => 
+                fav.english === currentTerm.english && fav.turkish === currentTerm.turkish
+            );
+            
+            if (isFavorited) {
+                bookmarkBtn.classList.add('favorited');
+                bookmarkBtn.textContent = '★';
+            } else {
+                bookmarkBtn.classList.remove('favorited');
+                bookmarkBtn.textContent = '☆';
+            }
+        }
+
+        function updateFavoritesList() {
+            const favoritesList = document.getElementById('favoritesList');
+            
+            if (favorites.length === 0) {
+                favoritesList.innerHTML = `
+                    <div class="no-favorites">
+                        Henüz favori terim eklemediniz.<br><br>
+                        Bir terimi favorilere eklemek için ★ butonunu kullanın.
+                    </div>
+                `;
+                return;
+            }
+            
+            favoritesList.innerHTML = favorites.map((fav, index) => `
+                <div class="favorite-item" onclick="goToFavorite(${index})">
+                    <span class="favorite-remove" onclick="removeFavorite(${index}); event.stopPropagation();">×</span>
+                    <div class="favorite-english">${fav.english}</div>
+                    <div class="favorite-turkish">${fav.turkish}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateFavoriteCount() {
+            document.getElementById('favoriteCount').textContent = favorites.length;
+        }
+
+        function removeFavorite(index) {
+            favorites.splice(index, 1);
+            saveFavorites();
+            updateFavoritesList();
+            updateFavoriteCount();
+            updateBookmarkButton();
+            showMessage('Favorilerden çıkarıldı!');
+        }
+
+        function goToFavorite(index) {
+            const favorite = favorites[index];
+            
+            // Tüm terimlerde bu favoriteyi bul
+            const termIndex = allTerms.findIndex(term => 
+                term.english === favorite.english && term.turkish === favorite.turkish
+            );
+            
+            if (termIndex !== -1) {
+                // Arama temizle ve o terime git
+                clearSearch();
+                currentIndex = termIndex;
+                displayCurrentTerm();
+                closeSidebar();
+                showMessage(`${favorite.english} terimine gidildi!`);
+            }
+        }
+
+        // Sidebar fonksiyonları
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.querySelector('.hamburger-menu');
+            const overlay = document.querySelector('.overlay');
+            
+            sidebar.classList.toggle('active');
+            hamburger.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.querySelector('.hamburger-menu');
+            const overlay = document.querySelector('.overlay');
+            
+            sidebar.classList.remove('active');
+            hamburger.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        // Mesaj gösterme
+        function showMessage(text) {
+            // Basit bir toast mesajı
+            const existingMsg = document.querySelector('.toast-message');
+            if (existingMsg) existingMsg.remove();
+            
+            const msg = document.createElement('div');
+            msg.className = 'toast-message';
+            msg.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #333;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                z-index: 10000;
+                font-family: 'Courier New', monospace;
+            `;
+            msg.textContent = text;
+            document.body.appendChild(msg);
+            
+            setTimeout(() => msg.remove(), 2000);
+        }
 
         // Telaffuz fonksiyonu - temel telaffuz üreteci
         function getPronunciation(word) {
@@ -265,6 +624,22 @@
             return pronMap[word] || word.toLowerCase().replace(/[^a-z]/g, "-");
         }
 
+        // Ana veri yükleme fonksiyonu
+        async function loadTermsData() {
+            // Önce cache'den dene
+            const cachedData = loadFromCache();
+            if (cachedData) {
+                allTerms = cachedData;
+                currentTerms = [...allTerms];
+                isDataLoaded = true;
+                displayCurrentTerm();
+                return;
+            }
+
+            // Cache'de yoksa GitHub'dan çek
+            await loadTermsFromGitHub();
+        }
+
         // GitHub'dan JSON verisini çek
         async function loadTermsFromGitHub() {
             try {
@@ -281,9 +656,18 @@
                     throw new Error('JSON formatı hatalı: Veri bir dizi olmalı');
                 }
                 
-                allTerms = data;
+                // Hatalı verileri filtrele
+                allTerms = data.filter(term => 
+                    term && 
+                    term.english && term.english.trim() !== '' &&
+                    term.turkish && term.turkish.trim() !== ''
+                );
+                
                 currentTerms = [...allTerms];
                 isDataLoaded = true;
+                
+                // Cache'e kaydet
+                saveToCache(allTerms);
                 
                 console.log(`${allTerms.length} terim başarıyla yüklendi`);
                 displayCurrentTerm();
@@ -346,6 +730,7 @@
             `;
             
             updateNavigation();
+            updateBookmarkButton();
         }
 
         // Navigasyon güncelle
@@ -388,7 +773,7 @@
         // Terim ara
         function searchTerms() {
             if (!isDataLoaded) {
-                alert('Veriler henüz yüklenmedi. Lütfen bekleyin.');
+                showMessage('Veriler henüz yüklenmedi. Lütfen bekleyin.');
                 return;
             }
 
@@ -424,6 +809,14 @@
         document.addEventListener('keydown', function(e) {
             if (!isDataLoaded) return;
             
+            // Sidebar açıkken klavye kısayollarını devre dışı bırak
+            if (document.getElementById('sidebar').classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    closeSidebar();
+                }
+                return;
+            }
+            
             switch(e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
@@ -441,6 +834,13 @@
                 case 'Escape':
                     clearSearch();
                     break;
+                case 'f':
+                case 'F':
+                    if (!document.activeElement === document.getElementById('searchInput')) {
+                        e.preventDefault();
+                        toggleBookmark();
+                    }
+                    break;
             }
         });
 
@@ -451,10 +851,11 @@
             }
         });
 
-        // Sayfa yüklendiğinde verileri çek
+        // Sayfa yüklendiğinde çalış
         window.addEventListener('load', function() {
-            console.log('Sayfa yüklendi, GitHub\'dan veriler çekiliyor...');
-            loadTermsFromGitHub();
+            console.log('Sayfa yüklendi, veriler kontrol ediliyor...');
+            loadFavorites();
+            loadTermsData();
         });
 
         // Hata durumunda sayfa yenileme seçeneği
