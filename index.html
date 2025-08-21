@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Programlama Sözlüğü</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .search-container {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-input {
+            background-color: #000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            outline: none;
+            width: 300px;
+        }
+        
+        .search-btn {
+            background-color: #000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .search-btn:hover {
+            background-color: #ffffff;
+            color: #000;
+        }
+        
+        .term-display {
+            text-align: center;
+            max-width: 80%;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .term-english {
+            font-size: 36px;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .term-pronunciation {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        
+        .term-turkish {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 15px;
+        }
+        
+        .term-category {
+            font-size: 14px;
+            font-weight: 400;
+            color: #ffd180;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .term-description {
+            font-size: 16px;
+            font-weight: 300;
+            color: #ffffff;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .term-example {
+            font-size: 14px;
+            font-weight: 300;
+            color: #ffffff;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        
+        .no-results {
+            color: #ffffff;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .loading {
+            color: #ffffff;
+            font-size: 18px;
+            text-align: center;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        .error {
+            color: #ff6b6b;
+            font-size: 18px;
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #ff6b6b;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .navigation {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            width: 80%;
+            max-width: 600px;
+            justify-content: space-between;
+        }
+        
+        .nav-btn {
+            background-color: #000;
+            color: #ffffff;
+            border: none;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .nav-btn:hover {
+            color: #888;
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .term-counter {
+            font-size: 18px;
+            color: #ffffff;
+            padding: 10px 20px;
+            white-space: nowrap;
+        }
+        
+        .current-number {
+            font-weight: 300;
+        }
+        
+        .total-number {
+            font-weight: 900;
+        }
+        
+        @media (max-width:768px){
+            .search-input {width:200px;}
+            .term-english {font-size:24px;}
+            .term-turkish {font-size:18px;}
+            .term-description {font-size:14px;}
+            .nav-btn {width:50px;height:50px;font-size:20px;}
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-body">
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Terim ara...">
+            <button class="search-btn" onclick="searchTerms()">SEARCH</button>
+            <button class="search-btn" onclick="clearSearch()">CLEAR</button>
+        </div>
+        
+        <div class="term-display" id="termDisplay">
+            <div class="loading">
+                Veriler yükleniyor...<br>
+                GitHub'dan JSON verisi çekiliyor...
+            </div>
+        </div>
+        
+        <div class="navigation">
+            <button class="nav-btn" id="prevBtn" onclick="previousTerm()">◀</button>
+            <div class="term-counter">
+                <span id="currentIndex" class="current-number">0</span> / <span id="totalTerms" class="total-number">0</span>
+            </div>
+            <button class="nav-btn" id="nextBtn" onclick="nextTerm()">▶</button>
+        </div>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let allTerms = [];
+        let currentTerms = [];
+        let currentIndex = 0;
+        let isDataLoaded = false;
+
+        // GitHub JSON URL'si
+        const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/umittasdemir1/Terimler_Sozlugu/refs/heads/main/terms.json';
+
+        // Telaffuz fonksiyonu - temel telaffuz üreteci
+        function getPronunciation(word) {
+            const pronMap = {
+                "Algorithm":"al-go-ri-tm","API":"ey-pi-ay","Array":"a-rey","Backend":"bek-end","Boolean":"bu-li-an",
+                "Bug":"bag","Cache":"keş","Class":"klas","Compiler":"kom-pay-lır","CSS":"si-es-es","Database":"dey-ta-beys",
+                "Debug":"di-bag","DOM":"di-o-em","Framework":"freym-vörk","Frontend":"fır-ont-end","Function":"fank-şın",
+                "Git":"git","HTML":"eyç-ti-em-el","HTTP":"eyç-ti-ti-pi","IDE":"ay-di-i","JavaScript":"ca-va-sik-ript",
+                "JSON":"cey-sın","Library":"lay-bre-ri","Loop":"lup","Method":"me-tod","Object":"ob-cekt","Parameter":"pa-ra-mi-tır",
+                "Python":"pay-ton","Repository":"ri-po-zi-to-ri","Server":"sör-vır","SQL":"es-kyo-el","String":"si-tring",
+                "Variable":"ver-i-yı-bıl","Version Control":"vör-şın kon-trol","Web Development":"veb di-ve-lop-mınt",
+                "Binary":"bay-ne-ri","Bootstrap":"but-si-trap","Client":"klay-ınt","Cloud Computing":"klaud kom-pyu-ting",
+                "Data Structure":"dey-ta si-trak-çır","DevOps":"dev-ops","Docker":"dok-kır","Encryption":"in-kırp-şın",
+                "Firebase":"fay-ır-beys","GitHub":"git-hab","Hash":"heş","Interface":"in-tır-feys","jQuery":"cey-kvo-ri",
+                "Kubernetes":"ku-ber-ne-tis","Linux":"li-naks","Machine Learning":"mı-şin lör-ning","Node.js":"nod-cey-es",
+                "OOP":"o-o-pi","PHP":"pi-eyç-pi","React":"ri-ekt","REST API":"rest ey-pi-ay","Software":"soft-ver",
+                "TypeScript":"tayp-sik-ript","URL":"yu-ar-el","Vue.js":"vyu-cey-es","Webpack":"veb-pek","XML":"eks-em-el"
+            };
+            return pronMap[word] || word.toLowerCase().replace(/[^a-z]/g, "-");
+        }
+
+        // GitHub'dan JSON verisini çek
+        async function loadTermsFromGitHub() {
+            try {
+                const response = await fetch(GITHUB_JSON_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Hatası: ${response.status} - ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // JSON yapısını kontrol et
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON formatı hatalı: Veri bir dizi olmalı');
+                }
+                
+                allTerms = data;
+                currentTerms = [...allTerms];
+                isDataLoaded = true;
+                
+                console.log(`${allTerms.length} terim başarıyla yüklendi`);
+                displayCurrentTerm();
+                
+            } catch (error) {
+                console.error('Veri yükleme hatası:', error);
+                showError(`Veriler yüklenemedi: ${error.message}`);
+            }
+        }
+
+        // Hata mesajı göster
+        function showError(message) {
+            document.getElementById('termDisplay').innerHTML = `
+                <div class="error">
+                    <strong>HATA!</strong><br><br>
+                    ${message}<br><br>
+                    <small>
+                        • İnternet bağlantınızı kontrol edin<br>
+                        • GitHub repository'sine erişim var mı kontrol edin<br>
+                        • JSON dosyası formatı doğru mu kontrol edin<br>
+                        • Birkaç saniye sonra sayfayı yenileyin
+                    </small>
+                </div>
+            `;
+            updateNavigation();
+        }
+
+        // Mevcut terimi göster
+        function displayCurrentTerm() {
+            if (!isDataLoaded) {
+                return;
+            }
+
+            if (currentTerms.length === 0) {
+                document.getElementById('termDisplay').innerHTML = `
+                    <div class="no-results">
+                        ARAMA SONUCU YOK!<br><br>
+                        Arama kriterlerinizi değiştirin.
+                    </div>
+                `;
+                updateNavigation();
+                return;
+            }
+
+            const term = currentTerms[currentIndex];
+            
+            // JSON'dan gelen veriyi kontrol et
+            if (!term.english || !term.turkish) {
+                console.error('Hatalı terim verisi:', term);
+                return;
+            }
+
+            document.getElementById('termDisplay').innerHTML = `
+                <div class="term-english">${term.english}</div>
+                <div class="term-pronunciation">(${term.pronunciation || getPronunciation(term.english)})</div>
+                <div class="term-turkish">${term.turkish}</div>
+                <div class="term-category">${term.categoryTurkish || 'Genel'} (${term.category || 'General'})</div>
+                <div class="term-description">${term.description || 'Açıklama bulunmuyor.'}</div>
+                <div class="term-example">${term.example || ''}</div>
+            `;
+            
+            updateNavigation();
+        }
+
+        // Navigasyon güncelle
+        function updateNavigation() {
+            document.getElementById('currentIndex').textContent = currentTerms.length > 0 ? currentIndex + 1 : 0;
+            document.getElementById('totalTerms').textContent = currentTerms.length;
+            
+            // Butonları etkinleştir/devre dışı bırak
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = !isDataLoaded || currentTerms.length === 0;
+            nextBtn.disabled = !isDataLoaded || currentTerms.length === 0;
+        }
+
+        // Sonraki terim
+        function nextTerm() {
+            if (!isDataLoaded || currentTerms.length === 0) return;
+            
+            if (currentIndex < currentTerms.length - 1) {
+                currentIndex++;
+            } else {
+                currentIndex = 0; // Son terimden sonra başa dön
+            }
+            displayCurrentTerm();
+        }
+
+        // Önceki terim
+        function previousTerm() {
+            if (!isDataLoaded || currentTerms.length === 0) return;
+            
+            if (currentIndex > 0) {
+                currentIndex--;
+            } else {
+                currentIndex = currentTerms.length - 1; // İlk terimden önce sona git
+            }
+            displayCurrentTerm();
+        }
+
+        // Terim ara
+        function searchTerms() {
+            if (!isDataLoaded) {
+                alert('Veriler henüz yüklenmedi. Lütfen bekleyin.');
+                return;
+            }
+
+            const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (searchText === '') {
+                currentTerms = [...allTerms];
+            } else {
+                currentTerms = allTerms.filter(term => 
+                    (term.english && term.english.toLowerCase().includes(searchText)) ||
+                    (term.turkish && term.turkish.toLowerCase().includes(searchText)) ||
+                    (term.description && term.description.toLowerCase().includes(searchText)) ||
+                    (term.categoryTurkish && term.categoryTurkish.toLowerCase().includes(searchText)) ||
+                    (term.category && term.category.toLowerCase().includes(searchText))
+                );
+            }
+            
+            currentIndex = 0;
+            displayCurrentTerm();
+        }
+
+        // Aramayı temizle
+        function clearSearch() {
+            if (!isDataLoaded) return;
+            
+            document.getElementById('searchInput').value = '';
+            currentTerms = [...allTerms];
+            currentIndex = 0;
+            displayCurrentTerm();
+        }
+
+        // Klavye kısayolları
+        document.addEventListener('keydown', function(e) {
+            if (!isDataLoaded) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    previousTerm();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    nextTerm();
+                    break;
+                case 'Enter':
+                    if (document.activeElement === document.getElementById('searchInput')) {
+                        searchTerms();
+                    }
+                    break;
+                case 'Escape':
+                    clearSearch();
+                    break;
+            }
+        });
+
+        // Enter tuşu ile arama
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchTerms();
+            }
+        });
+
+        // Sayfa yüklendiğinde verileri çek
+        window.addEventListener('load', function() {
+            console.log('Sayfa yüklendi, GitHub\'dan veriler çekiliyor...');
+            loadTermsFromGitHub();
+        });
+
+        // Hata durumunda sayfa yenileme seçeneği
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Hatası:', e.error);
+        });
+
+        // Network hatalarını yakala
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Promise Hatası:', e.reason);
+        });
+    </script>
+</body>
+</html>
