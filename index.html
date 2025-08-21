@@ -17,6 +17,45 @@
             flex-direction: column;
         }
         
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-size: 24px;
+        }
+        
+        .typewriter-text {
+            border-right: 2px solid #ffffff;
+            animation: blink-cursor 1s infinite;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+        }
+        
+        @keyframes blink-cursor {
+            0%, 50% { border-right-color: #ffffff; }
+            51%, 100% { border-right-color: transparent; }
+        }
+        
+        .loading-screen.fade-out {
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .loading-screen.hidden {
+            display: none;
+        }
+        
         .terminal-body {
             flex: 1;
             display: flex;
@@ -77,14 +116,6 @@
         
         .sidebar.active {
             left: 0;
-        }
-        
-        .sidebar-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
         }
         
         .favorite-item {
@@ -241,40 +272,6 @@
             text-align: center;
         }
         
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            font-size: 24px;
-        }
-        
-        .typewriter-text {
-            border-right: 2px solid #ffffff;
-            animation: blink-cursor 1s infinite;
-            min-height: 30px;
-            display: flex;
-            align-items: center;
-        }
-        
-        @keyframes blink-cursor {
-            0%, 50% { border-right-color: #ffffff; }
-            51%, 100% { border-right-color: transparent; }
-        }
-        
-        .loading-screen.fade-out {
-            opacity: 0;
-            transition: opacity 0.5s ease-out;
-        }
-        
         .loading {
             color: #ffffff;
             font-size: 18px;
@@ -286,6 +283,8 @@
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0.3; }
         }
+        
+        .error {
             color: #ff6b6b;
             font-size: 18px;
             text-align: center;
@@ -295,7 +294,7 @@
             margin: 0 auto;
         }
         
-        .error {
+        .navigation {
             position: absolute;
             bottom: 50px;
             left: 50%;
@@ -333,22 +332,22 @@
             cursor: not-allowed;
         }
         
-        .navigation {
+        .term-counter {
             font-size: 18px;
             color: #ffffff;
             padding: 10px 20px;
             white-space: nowrap;
         }
         
-        .term-counter {
+        .current-number {
             font-weight: 300;
         }
         
-        .current-number {
+        .total-number {
             font-weight: 900;
         }
         
-        .total-number {
+        .overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -359,11 +358,11 @@
             display: none;
         }
         
-        .overlay {
+        .overlay.active {
             display: block;
         }
         
-        .overlay.active {
+        @media (max-width:768px){
             .search-input {width:180px;}
             .search-btn, .bookmark-btn {width: 32px; height: 32px; font-size: 14px;}
             .search-input {height: 32px; font-size: 12px;}
@@ -373,9 +372,14 @@
             .nav-btn {width:50px;height:50px;font-size:20px;}
             .sidebar {width: 100%; left: -100%;}
         }
-        @media (max-width:768px){
+    </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="typewriter-text" id="typewriterText"></div>
+    </div>
+
     <!-- Hamburger Menu -->
     <div class="hamburger-menu" onclick="toggleSidebar()">
         <div class="hamburger-line"></div>
@@ -427,87 +431,62 @@
         let currentIndex = 0;
         let isDataLoaded = false;
         let favorites = [];
-        let isLoadingComplete = false;
-
-        // Typewriter efekti
-        function typeWriter(text, element, speed = 100) {
-            return new Promise((resolve) => {
-                let i = 0;
-                element.textContent = '';
-                
-                function type() {
-                    if (i < text.length) {
-                        element.textContent += text.charAt(i);
-                        i++;
-                        setTimeout(type, speed);
-                    } else {
-                        resolve();
-                    }
-                }
-                type();
-            });
-        }
-
-        // Silme efekti
-        function eraseText(element, speed = 50) {
-            return new Promise((resolve) => {
-                const text = element.textContent;
-                let i = text.length;
-                
-                function erase() {
-                    if (i > 0) {
-                        element.textContent = text.substring(0, i - 1);
-                        i--;
-                        setTimeout(erase, speed);
-                    } else {
-                        resolve();
-                    }
-                }
-                erase();
-            });
-        }
-
-        // Loading screen animasyonu
-        async function showLoadingAnimation() {
-            const typewriterElement = document.getElementById('typewriterText');
-            
-            // "Merhaba Dünya..." yazısını yaz
-            await typeWriter('Merhaba Dünya...', typewriterElement, 120);
-            
-            // 1 saniye bekle
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Yazıyı sil
-            await eraseText(typewriterElement, 80);
-            
-            // 0.5 saniye bekle
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Loading screen'i kapat
-            const loadingScreen = document.getElementById('loadingScreen');
-            loadingScreen.classList.add('fade-out');
-            
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-                isLoadingComplete = true;
-                
-                // Eğer veriler henüz yüklenmediyse loading mesajı göster
-                if (!isDataLoaded) {
-                    document.getElementById('termDisplay').innerHTML = `
-                        <div class="loading">
-                            Veriler yükleniyor...<br>
-                            Cache kontrol ediliyor...
-                        </div>
-                    `;
-                }
-            }, 500);
-        }
 
         // Cache ve API ayarları
         const CACHE_KEY = 'programming_terms_cache';
         const FAVORITES_KEY = 'programming_favorites';
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 saat
         const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/umittasdemir1/Terimler_Sozlugu/refs/heads/main/terms.json';
+
+        // Typewriter efekti
+        async function typeWriter(text, element, speed = 100) {
+            element.textContent = '';
+            for (let i = 0; i < text.length; i++) {
+                element.textContent += text.charAt(i);
+                await new Promise(resolve => setTimeout(resolve, speed));
+            }
+        }
+
+        // Silme efekti
+        async function eraseText(element, speed = 50) {
+            const text = element.textContent;
+            for (let i = text.length; i > 0; i--) {
+                element.textContent = text.substring(0, i - 1);
+                await new Promise(resolve => setTimeout(resolve, speed));
+            }
+        }
+
+        // Loading screen animasyonu
+        async function showLoadingAnimation() {
+            const typewriterElement = document.getElementById('typewriterText');
+            
+            try {
+                // "Merhaba Dünya..." yazısını yaz
+                await typeWriter('Merhaba Dünya...', typewriterElement, 120);
+                
+                // 1 saniye bekle
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Yazıyı sil
+                await eraseText(typewriterElement, 80);
+                
+                // 0.5 saniye bekle
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Loading screen'i kapat
+                const loadingScreen = document.getElementById('loadingScreen');
+                loadingScreen.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                }, 500);
+                
+            } catch (error) {
+                console.error('Loading animasyon hatası:', error);
+                // Hata durumunda direkt kapat
+                document.getElementById('loadingScreen').classList.add('hidden');
+            }
+        }
 
         // Cache fonksiyonları
         function saveToCache(data) {
@@ -550,7 +529,6 @@
                 if (saved) {
                     favorites = JSON.parse(saved);
                     updateFavoritesList();
-                    updateFavoriteCount();
                 }
             } catch (e) {
                 console.error('Favoriler yükleme hatası:', e);
@@ -594,7 +572,6 @@
             
             saveFavorites();
             updateFavoritesList();
-            updateFavoriteCount();
             updateBookmarkButton();
         }
 
@@ -640,15 +617,10 @@
             `).join('');
         }
 
-        function updateFavoriteCount() {
-            // Başlık kaldırıldığı için bu fonksiyon artık boş
-        }
-
         function removeFavorite(index) {
             favorites.splice(index, 1);
             saveFavorites();
             updateFavoritesList();
-            updateFavoriteCount();
             updateBookmarkButton();
             showMessage('Favorilerden çıkarıldı!');
         }
@@ -811,7 +783,7 @@
 
         // Mevcut terimi göster
         function displayCurrentTerm() {
-            if (!isDataLoaded || !isLoadingComplete) {
+            if (!isDataLoaded) {
                 return;
             }
 
@@ -950,7 +922,7 @@
                     break;
                 case 'f':
                 case 'F':
-                    if (!document.activeElement === document.getElementById('searchInput')) {
+                    if (document.activeElement !== document.getElementById('searchInput')) {
                         e.preventDefault();
                         toggleBookmark();
                     }
@@ -970,18 +942,26 @@
             console.log('Sayfa yüklendi, loading animasyonu başlatılıyor...');
             
             // Loading animasyonu ve veri yüklemeyi paralel başlat
+            loadFavorites();
+            
             const animationPromise = showLoadingAnimation();
-            const dataPromise = (async () => {
-                loadFavorites();
-                await loadTermsData();
-            })();
+            const dataPromise = loadTermsData();
             
-            // Her ikisinin de tamamlanmasını bekle
-            await Promise.all([animationPromise, dataPromise]);
+            // Animasyon bitsin diye bekle
+            await animationPromise;
             
-            // Eğer loading animasyonu bittikten sonra veriler yüklenmişse, terimi göster
-            if (isDataLoaded && isLoadingComplete) {
+            // Veriler yüklenmişse göster, değilse loading mesajı göster
+            if (isDataLoaded) {
                 displayCurrentTerm();
+            } else {
+                document.getElementById('termDisplay').innerHTML = `
+                    <div class="loading">
+                        Veriler yükleniyor...<br>
+                        GitHub'dan JSON verisi çekiliyor...
+                    </div>
+                `;
+                // Veri yüklemesinin bitmesini bekle
+                await dataPromise;
             }
         });
 
