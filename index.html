@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProgTerm</title>
+    <title>Terminal Programlama Sözlüğü</title>
     <style>
         body {
             background-color: #000000;
@@ -223,6 +223,31 @@
             color: #ffffff;
             margin-bottom: 10px;
             text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+        
+        .term-english:hover {
+            color: #ffd180;
+        }
+        
+        .term-english.has-note {
+            color: #ffd180;
+        }
+        
+        .term-english.has-note::after {
+            content: "📋";
+            font-size: 24px;
+            margin-left: 10px;
+            color: #ffffff;
+            animation: pulse 2s infinite;
+            filter: grayscale(100%);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         .term-pronunciation {
@@ -264,6 +289,123 @@
             color: #ffffff;
             font-style: italic;
             margin-bottom: 20px;
+        }
+        
+        .note-hint {
+            font-size: 14px;
+            font-weight: 300;
+            color: #ffffff;
+            font-style: normal;
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .note-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .note-modal.active {
+            display: flex;
+        }
+        
+        .note-container {
+            background-color: #000000;
+            border: 2px solid #ffffff;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .note-header {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ffffff;
+            padding-bottom: 10px;
+        }
+        
+        .note-textarea {
+            width: 100%;
+            min-height: 200px;
+            background-color: #000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .note-textarea:focus {
+            border-color: #ffffff;
+            box-shadow: 0 0 5px #ffffff;
+        }
+        
+        .note-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .note-btn {
+            background-color: #000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .note-btn:hover {
+            background-color: #ffffff;
+            color: #000;
+        }
+        
+        .note-btn.delete {
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+        
+        .note-btn.delete:hover {
+            background-color: #ffffff;
+            color: #000;
+        }
+        
+        .note-info {
+            font-size: 10px;
+            color: #ffffff;
+        }
+        
+        .note-display {
+            display: none;
         }
         
         .no-results {
@@ -371,6 +513,8 @@
             .term-description {font-size:14px;}
             .nav-btn {width:50px;height:50px;font-size:20px;}
             .sidebar {width: 100%; left: -100%;}
+            .note-container {width: 95%; padding: 15px;}
+            .note-textarea {min-height: 150px;}
         }
     </style>
 </head>
@@ -378,6 +522,26 @@
     <!-- Loading Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="typewriter-text" id="typewriterText"></div>
+    </div>
+
+    <!-- Note Modal -->
+    <div class="note-modal" id="noteModal">
+        <div class="note-container">
+            <div class="note-header" id="noteHeader">
+                NOT EKLE/DÜZENLE
+            </div>
+            <textarea class="note-textarea" id="noteTextarea" placeholder="Notunuzu buraya yazın..."></textarea>
+            <div class="note-controls">
+                <div class="note-info">
+                    <span id="charCount">0</span>/1000 karakter
+                </div>
+                <div>
+                    <button class="note-btn delete" id="deleteNoteBtn" onclick="deleteNote()">SİL</button>
+                    <button class="note-btn" onclick="saveNote()">KAYDET</button>
+                    <button class="note-btn" onclick="closeNoteModal()">İPTAL</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Hamburger Menu -->
@@ -431,10 +595,13 @@
         let currentIndex = 0;
         let isDataLoaded = false;
         let favorites = [];
+        let notes = {};
+        let currentEditingTerm = null;
 
         // Cache ve API ayarları
         const CACHE_KEY = 'programming_terms_cache';
         const FAVORITES_KEY = 'programming_favorites';
+        const NOTES_KEY = 'programming_notes';
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 saat
         const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/umittasdemir1/Terimler_Sozlugu/refs/heads/main/terms.json';
 
@@ -535,6 +702,118 @@
                 favorites = [];
             }
         }
+
+        // Not fonksiyonları
+        function loadNotes() {
+            try {
+                const saved = localStorage.getItem(NOTES_KEY);
+                if (saved) {
+                    notes = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('Notlar yükleme hatası:', e);
+                notes = {};
+            }
+        }
+
+        function saveNotes() {
+            try {
+                localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+            } catch (e) {
+                console.error('Notlar kaydetme hatası:', e);
+            }
+        }
+
+        function getTermKey(term) {
+            return `${term.english}_${term.turkish}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        }
+
+        function hasNote(term) {
+            const key = getTermKey(term);
+            return notes[key] && notes[key].trim() !== '';
+        }
+
+        function openNoteModal(term) {
+            currentEditingTerm = term;
+            const key = getTermKey(term);
+            const existingNote = notes[key] || '';
+            
+            document.getElementById('noteHeader').textContent = `${term.english.toUpperCase()} - NOT`;
+            document.getElementById('noteTextarea').value = existingNote;
+            document.getElementById('charCount').textContent = existingNote.length;
+            document.getElementById('deleteNoteBtn').style.display = existingNote ? 'inline-block' : 'none';
+            document.getElementById('noteModal').classList.add('active');
+            
+            // Focus textarea
+            setTimeout(() => {
+                document.getElementById('noteTextarea').focus();
+            }, 300);
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.remove('active');
+            currentEditingTerm = null;
+        }
+
+        function saveNote() {
+            if (!currentEditingTerm) return;
+            
+            const noteText = document.getElementById('noteTextarea').value.trim();
+            const key = getTermKey(currentEditingTerm);
+            
+            if (noteText) {
+                notes[key] = noteText;
+                showMessage('Not kaydedildi!');
+            } else {
+                delete notes[key];
+                showMessage('Not silindi!');
+            }
+            
+            saveNotes();
+            displayCurrentTerm(); // Terim görünümünü güncelle
+            closeNoteModal();
+        }
+
+        function deleteNote() {
+            if (!currentEditingTerm) return;
+            
+            const key = getTermKey(currentEditingTerm);
+            delete notes[key];
+            saveNotes();
+            
+            showMessage('Not silindi!');
+            displayCurrentTerm();
+            closeNoteModal();
+        }
+
+        // Karakter sayacı
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('noteTextarea');
+            if (textarea) {
+                textarea.addEventListener('input', function() {
+                    const count = this.value.length;
+                    const maxLength = 1000;
+                    
+                    if (count > maxLength) {
+                        this.value = this.value.substring(0, maxLength);
+                        return;
+                    }
+                    
+                    document.getElementById('charCount').textContent = count;
+                    
+                    // Otomatik kaydetme (3 saniye sonra)
+                    clearTimeout(window.autoSaveTimeout);
+                    window.autoSaveTimeout = setTimeout(() => {
+                        if (currentEditingTerm && this.value.trim() !== '') {
+                            const key = getTermKey(currentEditingTerm);
+                            notes[key] = this.value.trim();
+                            saveNotes();
+                            showMessage('Not otomatik kaydedildi!');
+                        }
+                    }, 3000);
+                });
+            }
+        });
 
         function saveFavorites() {
             try {
@@ -807,12 +1086,13 @@
             }
 
             document.getElementById('termDisplay').innerHTML = `
-                <div class="term-english">${term.english}</div>
+                <div class="term-english ${hasNote(term) ? 'has-note' : ''}" onclick="openNoteModal(currentTerms[currentIndex])">${term.english}</div>
                 <div class="term-pronunciation">(${term.pronunciation || getPronunciation(term.english)})</div>
                 <div class="term-turkish">${term.turkish}</div>
                 <div class="term-category">${term.categoryTurkish || 'Genel'} (${term.category || 'General'})</div>
                 <div class="term-description">${term.description || 'Açıklama bulunmuyor.'}</div>
                 <div class="term-example">${term.example || ''}</div>
+                <div class="note-hint">Terime not eklemek için başlığa tıklayın</div>
             `;
             
             updateNavigation();
@@ -927,6 +1207,13 @@
                         toggleBookmark();
                     }
                     break;
+                case 'n':
+                case 'N':
+                    if (document.activeElement !== document.getElementById('searchInput') && currentTerms.length > 0) {
+                        e.preventDefault();
+                        openNoteModal(currentTerms[currentIndex]);
+                    }
+                    break;
             }
         });
 
@@ -937,12 +1224,27 @@
             }
         });
 
+        // Note modal ESC ile kapanma
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('noteModal').classList.contains('active')) {
+                closeNoteModal();
+            }
+        });
+
+        // Note modal dışına tıklayınca kapanma
+        document.getElementById('noteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNoteModal();
+            }
+        });
+
         // Sayfa yüklendiğinde çalış
         window.addEventListener('load', async function() {
             console.log('Sayfa yüklendi, loading animasyonu başlatılıyor...');
             
             // Loading animasyonu ve veri yüklemeyi paralel başlat
             loadFavorites();
+            loadNotes();
             
             const animationPromise = showLoadingAnimation();
             const dataPromise = loadTermsData();
